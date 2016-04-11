@@ -1,0 +1,21 @@
+.error {
+	color: red;
+}
+
+.good {
+	color: green;
+}
+
+.warning {
+	color: #D48601;
+}
+
+.original {
+	margin-top: 20px;
+}
+
+.title_file {
+	font-weight:bold;
+	text-decoration:underline;
+	margin-top:30px;
+}
