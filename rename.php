@@ -2,30 +2,10 @@
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
 
-require('AnimeParser.class.php');
-
-$dir = NULL;
-if (isset($_GET['dir']))
-{
-	$dir = $_GET['dir'];
-}
-if (file_exists($dir) === FALSE)
-{
-	echo 'Dossier invalide';
-	exit();
-}
-
-$dir = (substr($dir, -1) != '/') ? ($dir.'/') : ($dir);
-$list_dirs = array_values(array_diff(scandir($dir), ['..', '.']));
-
-$parser = new AnimeParser();
-foreach ($list_dirs as $d)
-{
-	$parser->add_dir($dir.$d);
-}
-
+require(__DIR__.'/class/AnimeParser.class.php');
 
 ?>
+
 <html>
     <head>
         <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
@@ -41,6 +21,31 @@ foreach ($list_dirs as $d)
     		<li><strong>run :</strong> Lance le renommage des fichiers.</li>
     	</ul>
     	
-    	<?php $parser->format(); ?>
+    	<?php 
+	    	$dir = NULL;
+	    	if (isset($_GET['dir']))
+	    	{
+	    		$dir = $_GET['dir'];
+	    	}
+	    	if (file_exists($dir) === FALSE)
+	    	{
+	    		echo 'Dossier invalide';
+	    	}
+	    	else 
+	    	{
+	    		$dir = (substr($dir, -1) != '/') ? ($dir.'/') : ($dir);
+	    		$list_dirs = array_values(array_diff(scandir($dir), ['..', '.']));
+	    		
+	    		$parser = new AnimeParser();
+	    		foreach ($list_dirs as $d)
+	    		{
+	    			$parser->add_dir($dir.$d);
+	    		}
+	    		
+	    		$parser->format();
+	    	}
+	    	
+	    	
+    	?>
     </body>
 </html>

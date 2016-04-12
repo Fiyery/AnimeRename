@@ -5,22 +5,7 @@ class AnimeParser
      * Liste des éléments sous forme de pattern à enlever dans le nom d'un anime.
      * @var array
      */
-    private $_exclude_words = [
-        '8bit',
-        '360p',
-        '720',
-        '1080',
-        '1280',
-        'x264',
-        'H264',
-        'H265',
-		'v1',
-		'v2',
-        '\[[^\]]+\]',
-        'S0?\d{1}',
-        'saison[\s|\-|_]0?\d{1}',
-        '\.[^\.]+$'
-    ];
+    private $_exclude_words = [];
     
     /**
      * Liste des épisodes impossibles à numéroter.
@@ -53,6 +38,8 @@ class AnimeParser
     public function __construct($dir=NULL)
     {
         $this->add_dir($dir);
+        $config = json_decode(file_get_contents(__DIR__.'/../config.json'));
+        $this->_exclude_words = $config->excluded_patterns;
     }
     
     /**
@@ -98,11 +85,15 @@ class AnimeParser
 	                    {
 	                    	if (isset($_GET['resolve']) && $_GET['resolve'] === '1')
 	                    	{
+	                    		if (isset($this->_conflicts[$anime]) === FALSE)
+	                    		{
+	                    			$this->_conflicts[$anime] = [];
+	                    		}
 	                    		$this->_conflicts[$anime][] = [
-	                    		'new' => $dir.$name,
-	                    		'old' => $dir.$f,
-	                    		'ext' => $ext,
-	                    		'num' => $num
+		                    		'new' => $dir.$name,
+		                    		'old' => $dir.$f,
+		                    		'ext' => $ext,
+		                    		'num' => $num
 	                    		];
 	                    	}
 	                    	else
@@ -197,7 +188,7 @@ class AnimeParser
 						'old' => $ep['old']
             		];
             		$num = sprintf("%0".$nb_zero."d", $ep['num']);	
-            		$episodes[$k]['new'] = dirname($ep['new']).'/'.str_replace($ep['num'], $num, basename($ep['new']));
+            		$episodes[$k]['new'] = dirname($ep['new']).'/'.preg_replace('#(\d+)\.#', $num.'.', basename($ep['new']));
             		$episodes[$k]['num'] = $num;
             		if ($episodes[$k]['old'] !== $episodes[$k]['new'])
             		{
