@@ -71,6 +71,7 @@ class AnimeParser
             echo '<div class="title_file">'.$dir.' : </div>';
             $regex = $this->_regex($dir);
             $anime = basename($dir);
+            $this->_format[$anime] = [];
             foreach ($files as $f)
             {
             	if (is_file($dir.$f))
@@ -123,49 +124,48 @@ class AnimeParser
             // Tentative de résolution des conflits.
             if (isset($_GET['resolve']) && $_GET['resolve'] === '1')
             {
-            	foreach ($this->_conflicts as $list)
+            	if (isset($this->_conflicts[$anime]))
             	{
-            		foreach ($list as &$conflict)
+            		foreach ($this->_conflicts[$anime] as &$conflict)
             		{
-            			preg_match_all('#\d+#', basename($conflict['new']), $num);
-            			$num = $num[0];
-            			// On cherche si l'un des épisodes n'existe pas déjà de manière sûrement identifiée.
-            			$final = [];
-            			foreach ($num as $n)
-            			{
-            				reset($this->_format[$anime]);
-            				$find = FALSE;
-            				while ($find === FALSE && (list(, $ep) = each($this->_format[$anime])))
-            				{
-            					if ($n == $ep['num'])
-            					{
-            						$find = TRUE;
-            					}
-            				}
-            				if ($find === FALSE)
-            				{
-            					$final[] = $n;
-            				}
-            			}
-            			if (count($final) === 1)
-            			{
-            				$this->_format[$anime][] = [
-	            				'new' => $dir.$anime.' '.$final[0].$ext,
-	            				'old' => $conflict['old'],
-	            				'num' => $final[0]
-            				];
-            			}
-            			else // Résolution impossible.
-            			{
-            				echo '<div class="original">'.basename($conflict['old']).'</div>';
-            				$err = '<div class="error">&#9888; Impossible de trouver le numéro de l\'épisode pour : '.basename($conflict['old']).'</div>';
-            				echo $err;
-            				$errors[] = $err;
-            			}
-            		}
-            	}
-            	unset($this->_conflicts);
-            }
+						preg_match_all('#\d+#', basename($conflict['new']), $num);
+						$num = $num[0];
+          				// On cherche si l'un des épisodes n'existe pas déjà de manière sûrement identifiée.
+           				$final = [];
+           				foreach ($num as $n)
+           				{
+           					reset($this->_format[$anime]);
+           					$find = FALSE;
+           					while ($find === FALSE && (list(, $ep) = each($this->_format[$anime])))
+           					{
+           						if ($n == $ep['num'])
+           						{
+           							$find = TRUE;
+           						}
+           					}
+          					if ($find === FALSE)
+           					{
+            						$final[] = $n;
+          					}
+           				}
+           				if (count($final) === 1)
+           				{
+           					$this->_format[$anime][] = [
+            					'new' => $dir.$anime.' '.$final[0].$ext,
+            					'old' => $conflict['old'],
+            					'num' => $final[0]
+           					];
+           				}
+           				else // Résolution impossible.
+           				{
+           					echo '<div class="original">'.basename($conflict['old']).'</div>';
+           					$err = '<div class="error">&#9888; Impossible de trouver le numéro de l\'épisode pour : '.basename($conflict['old']).'</div>';
+           					echo $err;
+           					$errors[] = $err;
+           				}
+          			}
+           		}
+           	}
                   
             // On recherche les épisodes maximal pour le bourage de 0;
             if (isset($this->_format[$anime]))
@@ -248,7 +248,7 @@ class AnimeParser
         {
             $name = preg_replace('#'.$pattern.'#i', '', $name);
         }
-        $name = preg_replace('#'.$anime.'#i', '', $name);
+        $name = preg_replace('#'.preg_quote($anime).'#i', '', $name);
         return $name;
     }
     
@@ -296,6 +296,11 @@ class AnimeParser
         echo '<h2>Episodes manquants</h2>';
         foreach ($this->_format as $anime => $data)
         {
+            $missing = [];
+            if (!is_array($data))
+            {
+            	var_dump($anime);
+            }
             $missing = [];
             usort($data, function($a, $b){
                 return ($a['num'] > $b['num']);
