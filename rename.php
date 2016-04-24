@@ -1,6 +1,18 @@
 <?php
+// Affichage des erreurs.
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
+ini_set('log_errors', 1);
+ini_set('error_log', __DIR__ . '/log_error.txt');
+
+function error_catch()
+{
+	echo '<strong><b>ERROR</b></strong>';
+	var_dump(func_get_args());
+}
+ 
+set_error_handler('error_catch');
+set_exception_handler('error_catch');
 
 require(__DIR__.'/class/AnimeParser.class.php');
 
@@ -17,6 +29,7 @@ require(__DIR__.'/class/AnimeParser.class.php');
     	<h2>Wiki Paramètres</h2>
     	<ul>
     		<li><strong>dir :</strong> Définit le dossier à explorer. Il faut prendre le dossier parents aux dossiers des animes.</li>
+    		<li><strong>multi :</strong> Permet le traitement des épisodes avec plusieurs numéros. Nécessite le mode "resolve".</li>
     		<li><strong>resolve :</strong> Tente de trouver les bons numéros des épisodes en déduisant par rapport aux épisodes existants.</li>
     		<li><strong>run :</strong> Lance le renommage des fichiers.</li>
     	</ul>
@@ -32,7 +45,7 @@ require(__DIR__.'/class/AnimeParser.class.php');
 	    		echo 'Dossier invalide';
 	    	}
 	    	else 
-	    	{
+	    	{	    		
 	    		$dir = (substr($dir, -1) != '/') ? ($dir.'/') : ($dir);
 	    		$list_dirs = array_values(array_diff(scandir($dir), ['..', '.']));
 	    		
@@ -44,8 +57,6 @@ require(__DIR__.'/class/AnimeParser.class.php');
 	    		
 	    		$parser->format();
 	    	}
-	    	
-	    	
     	?>
     </body>
 </html>

@@ -124,59 +124,34 @@ class AnimeParser
             // Tentative de résolution des conflits.
             if (isset($_GET['resolve']) && $_GET['resolve'] === '1')
             {
-            	if (isset($this->_conflicts[$anime]))
-            	{
-            		foreach ($this->_conflicts[$anime] as &$conflict)
-            		{
-						preg_match_all('#\d+#', basename($conflict['new']), $num);
-						$num = $num[0];
-          				// On cherche si l'un des épisodes n'existe pas déjà de manière sûrement identifiée.
-           				$final = [];
-           				foreach ($num as $n)
-           				{
-           					reset($this->_format[$anime]);
-           					$find = FALSE;
-           					while ($find === FALSE && (list(, $ep) = each($this->_format[$anime])))
-           					{
-           						if ($n == $ep['num'])
-           						{
-           							$find = TRUE;
-           						}
-           					}
-          					if ($find === FALSE)
-           					{
-            						$final[] = $n;
-          					}
-           				}
-           				if (count($final) === 1)
-           				{
-           					$this->_format[$anime][] = [
-            					'new' => $dir.$anime.' '.$final[0].$ext,
-            					'old' => $conflict['old'],
-            					'num' => $final[0]
-           					];
-           				}
-           				else // Résolution impossible.
-           				{
-           					echo '<div class="original">'.basename($conflict['old']).'</div>';
-           					$err = '<div class="error">&#9888; Impossible de trouver le numéro de l\'épisode pour : '.basename($conflict['old']).'</div>';
-           					echo $err;
-           					$errors[] = $err;
-           				}
-          			}
-           		}
+            	$this->_resolve($anime, $dir);
            	}
                   
             // On recherche les épisodes maximal pour le bourage de 0;
             if (isset($this->_format[$anime]))
             {
+            	// if ($anime == 'Black Bullet')  ob_clean();
             	$max = 0;
             	foreach ($this->_format[$anime] as $ep)
             	{
-            		$nb = number_format($ep['num']);
-            		if ($nb > $max)
+            		if (is_array($ep['num']))
             		{
-            			$max = $nb;
+            			foreach ($ep['num'] as $nb)
+            			{
+            				$nb = number_format($nb);
+            				if ($nb > $max)
+            				{
+            					$max = $nb;
+            				}
+            			}
+            		}
+            		else 
+            		{
+            			$nb = number_format($ep['num']);
+            			if ($nb > $max)
+            			{
+            				$max = $nb;
+            			}
             		}
             	}
             	// Avec le numéro de l'épisode maximal, on connait le nombre de bourage à 0.
@@ -187,9 +162,17 @@ class AnimeParser
             		$episodes[$k] = [
 						'old' => $ep['old']
             		];
-            		$num = sprintf("%0".$nb_zero."d", $ep['num']);	
-            		$episodes[$k]['new'] = dirname($ep['new']).'/'.preg_replace('#(\d+)\.#', $num.'.', basename($ep['new']));
-            		$episodes[$k]['num'] = $num;
+            		$episodes[$k]['new'] = $ep['new'];
+            		if (is_array($ep['num']) == FALSE)
+            		{
+            			$ep['num'] = [$ep['num']];
+            		}
+            		foreach ($ep['num'] as $nb)
+            		{
+            			$num = sprintf("%0".$nb_zero."d", $nb);
+            			$episodes[$k]['new'] = dirname($ep['new']).'/'.preg_replace('#(\d+)\.#', $num.'.', basename($episodes[$k]['new']));
+            			$episodes[$k]['num'][] = $nb;
+            		}
             		if ($episodes[$k]['old'] !== $episodes[$k]['new'])
             		{
             			$this->_count++;
@@ -204,6 +187,7 @@ class AnimeParser
             	}
             	$this->_format[$anime] = $episodes;
             }
+            // if ($anime == 'Black Bullet')  exit();
         }
 
         // Récupération des détails d'affichage.
@@ -280,6 +264,66 @@ class AnimeParser
     }
     
     /**
+     * Tente de résoudre les connflits de numéros d'épisode.
+     */
+    private function _resolve($anime, $dir)
+    {
+    	if (isset($this->_conflicts[$anime]))
+    	{
+    		foreach ($this->_conflicts[$anime] as &$conflict)
+    		{
+    			preg_match_all('#\d+#', basename($conflict['new']), $num);
+    			$num = $num[0];
+    			// On cherche si l'un des épisodes n'existe pas déjà de manière sûrement identifiée.
+    			$final = [];
+    			foreach ($num as $n)
+    			{
+    				reset($this->_format[$anime]);
+    				$find = FALSE;
+    				while ($find === FALSE && (list(, $ep) = each($this->_format[$anime])))
+    				{
+    					if ($n == $ep['num'])
+    					{
+    						$find = TRUE;
+    					}
+    				}
+    				if ($find === FALSE)
+    				{
+    					$final[] = $n;
+    				}
+    			}
+    			if (count($final) === 1) // Un seul numéro trouvé = Résolution ok.
+    			{
+    				$this->_format[$anime][] = [
+	    				'new' => $dir.$anime.' '.$final[0].$conflict['ext'],
+	    				'old' => $conflict['old'],
+	    				'num' => $final[0]
+    				];
+    			}
+    			else 
+    			{
+    				if (count($final) > 0 && $_GET['multi'] === '1')
+    				{
+    					$this->_format[$anime][] = [
+	    					'new' => $dir.$anime.' '.implode('-', $final).$conflict['ext'],
+	    					'old' => $conflict['old'],
+	    					'num' => $final
+    					];
+    				}
+    				else // Résolution impossible.
+    				{
+	    				echo '<div class="original">'.basename($conflict['old']).'</div>';
+	    				$err = '<div class="error">&#9888; Impossible de trouver le numéro de l\'épisode pour : '.basename($conflict['old']).'</div>';
+	    				echo $err;
+	    				$errors[] = $err;	
+    				}
+    				
+    			}
+    		}
+    	}
+    }
+    
+    /**
      * Vérifie la conformité des animes.
      */
     private function _control()
@@ -295,21 +339,34 @@ class AnimeParser
     {
         echo '<h2>Episodes manquants</h2>';
         foreach ($this->_format as $anime => $data)
-        {
-            $missing = [];
-            if (!is_array($data))
+        {        	                        
+            // Génération du tableau des numéros.
+            $list = [];
+            foreach ($data as $d)
             {
-            	var_dump($anime);
-            }
+            	if (is_scalar($d['num']))
+            	{
+            		$list[] = $d['num']; 
+            	}
+            	else
+            	{
+            		foreach ($d['num'] as $nb)
+            		{
+            			$list[] = $nb;
+            		}
+            	}
+            }  
+            
+            // Ordre croissant.
+            sort($list);
+
+            // Recherche des épisodes manquants.
             $missing = [];
-            usort($data, function($a, $b){
-                return ($a['num'] > $b['num']);
-            });
-            $count = count($data);
+            $count = count($list);
             for($i=1; $i < $count; $i++)
             {
-                $e1 = $data[$i-1]['num'];
-                $e2 = $data[$i]['num'];
+                $e1 = $list[$i-1];
+                $e2 = $list[$i];
                 if ($e1 != $e2 && $e1 + 1 != $e2)
                 {
                     $m = $e1 + 1;
@@ -337,29 +394,49 @@ class AnimeParser
         {
             $doublons = [];
     
+            // Génération du tableau des numéros.
+            $list = [];
+            foreach ($data as $d)
+            {
+            	if (is_scalar($d['num']))
+            	{
+            		$list[] = $d['num'];
+            	}
+            	else
+            	{
+            		foreach ($d['num'] as $nb)
+            		{
+            			$list[] = $nb;
+            		}
+            	}
+            }
+            
+            // Ordre croissant.
+            sort($list);
+            
             // Flag sur la recherche de doublon, on boucle tant que l'on en trouve.
             $find = TRUE;
             while ($find)
             {
                 $find = FALSE;
-                $max = count($data);
+                $max = count($list);
                 for($i=1; $i < $max; $i++)
                 {
-                    $e1 = $data[$i-1]['num'];
-                    $e2 = $data[$i]['num'];
+                    $e1 = $list[$i-1];
+                    $e2 = $list[$i];
                     if ($e1 == $e2)
                     {
                         $doublons[] = $e1;
-                        unset($data[$i-1]);
-                        unset($data[$i]);
+                        unset($list[$i-1]);
+                        unset($list[$i]);
                         $i = $max;
                         $find = TRUE;
                     }
                 }
-                $data = array_values($data);
+                $list = array_values($list);
             }
 
-            if (count($doublons))
+            if (count($doublons) > 0)
             {
                 echo '<div class="error">&#9888; Doublons trouvés pour '.$anime.' sur les épisodes : '.implode(', ', $doublons).'</div>';
             }
