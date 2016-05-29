@@ -1,6 +1,12 @@
 <?php
 class AnimeParser 
 {
+	/**
+	 * Nombre maximal d'épisodes manquants affichés unitairement.
+	 * @var int
+	 */
+	const MAX_EXPLICITE_MISSING_EPISODE = 10;
+	
     /**
      * Liste des éléments sous forme de pattern à enlever dans le nom d'un anime.
      * @var array
@@ -370,9 +376,16 @@ class AnimeParser
                 if ($e1 != $e2 && $e1 + 1 != $e2)
                 {
                     $m = $e1 + 1;
-                    while ($m != $e2)
+                    if ($e2 - $m > self::MAX_EXPLICITE_MISSING_EPISODE) 
                     {
-                        $missing[] = $m++;
+                    	$missing[] = $m.' à '.($e2 - 1);
+                    }
+                    else 
+                    {
+                    	while ($m != $e2)
+                    	{
+                    		$missing[] = $m++;
+                    	}
                     }
                 }
             }

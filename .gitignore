@@ -1,3 +1,5 @@
 .settings
 .buildpath
 .project
+log_error_php.txt
+log_error.txt
